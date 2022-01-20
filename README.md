@@ -15,12 +15,11 @@ This can be used as post-processing to angular i18n extraction, to update transl
 Either install via `npm i -g xliff-simple-merge` or run directly with `npx xliff-simple-merge`.
 
 ```text
-Usage: npx xliff-simple-merge [options]
-
 Options:
   -i, --input-file <inputFile>              input file/merge origin
   -d, --destination-file <destinationFile>  merge destination
   -o, --output-file <outputFile>            output file, if not provided "merge destination" is overwritten
+  --no-match-fuzzy                          prevent fuzzy matching of similar units with changed id
   --debug                                   enable debug output
   -h, --help                                display help for command
 ```
