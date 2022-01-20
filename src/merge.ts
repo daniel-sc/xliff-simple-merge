@@ -29,7 +29,11 @@ function toString(...nodes: XmlNode[]): string {
     return nodes.map(n => n.toString({preserveWhitespace: true, compressed: true})).join('');
 }
 
-export function merge(inFileContent: string, destFileContent: string, options?: { fuzzyMatch?: boolean }) {
+function collapseWhitespace(destSourceText: string) {
+    return destSourceText.trim().replace(/\s+/, ' ');
+}
+
+export function merge(inFileContent: string, destFileContent: string, options?: { fuzzyMatch?: boolean, collapseWhitespace?: boolean }) {
     const inDoc = new XmlDocument(inFileContent);
     const destDoc = new XmlDocument(destFileContent);
     const inFileElement = inDoc.childNamed('file')!;
@@ -47,7 +51,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
         if (destUnit) {
             const destSource = destUnit.childNamed('segment')!.childNamed('source')!;
             const destSourceText = toString(...destSource.children);
-            if (destSourceText !== unitSourceText) {
+            if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
                 destSource.firstChild = destSource.children[0];
                 destSource.lastChild = destSource.children[destSource.children.length - 1];

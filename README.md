@@ -20,6 +20,7 @@ Options:
   -d, --destination-file <destinationFile>  merge destination
   -o, --output-file <outputFile>            output file, if not provided "merge destination" is overwritten
   --no-match-fuzzy                          prevent fuzzy matching of similar units with changed id
+  --no-collapse-whitespace                  prevent collapsing of multiple whitespaces and trimming when comparing translations sources
   --debug                                   enable debug output
   -h, --help                                display help for command
 ```
