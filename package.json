@@ -1,6 +1,6 @@
 {
   "name": "xliff-simple-merge",
-  "version": "0.1.1-0",
+  "version": "0.1.1",
   "description": "Merges XLIFF files",
   "main": "dist/src/index.js",
   "bin": {
