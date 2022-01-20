@@ -7,13 +7,23 @@
     "xliff-simple-merge": "dist/src/index.js"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "test-coverage": "jest --coverage",
+    "build": "tsc"
   },
   "keywords": [
     "xliff",
     "angular",
     "i18n"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daniel-sc/xliff-simple-merge.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {
     "commander": "~8.3.0",
     "xmldoc": "~1.1.2"
