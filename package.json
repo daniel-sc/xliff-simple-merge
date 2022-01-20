@@ -1,0 +1,33 @@
+{
+  "name": "xliff-simple-merge",
+  "version": "0.0.1",
+  "description": "Merges XLIFF files",
+  "main": "dist/src/merge.js",
+  "bin": {
+    "xliff-simple-merge": "dist/src/index.js"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "xliff",
+    "angular",
+    "i18n"
+  ],
+  "dependencies": {
+    "commander": "~8.3.0",
+    "xmldoc": "~1.1.2"
+  },
+  "devDependencies": {
+    "@types/jest": "~26.0.20",
+    "@types/xml2js": "~0.4.9",
+    "@types/xmldoc": "~1.1.6",
+    "jest": "~27.4.7",
+    "ts-jest": "~27.1.3",
+    "ts-node": "^10.4.0",
+    "tslint": "~6.1.3",
+    "typescript": "~4.5.4"
+  },
+  "author": "daniel-schreiber@gmx.de",
+  "license": "ISC"
+}
