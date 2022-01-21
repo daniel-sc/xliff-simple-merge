@@ -88,7 +88,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
                 segmentSource.children.push(new XmlDocument(`<target>${unitSourceText}</target>`));
             } else {
                 const sourceIndex = unit.children.indexOf(unitSource);
-                unit.children.splice(sourceIndex + 1, 0, new XmlDocument(`<target>${unitSourceText}</target>`))
+                unit.children.splice(sourceIndex + 1, 0, new XmlDocument(`<target>${unitSourceText}</target>`));
             }
             destUnitsParent.children.push(unit);
             destUnitsParent.lastChild = destUnitsParent.children[destUnitsParent.children.length - 1];
