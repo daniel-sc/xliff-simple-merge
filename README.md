@@ -4,7 +4,7 @@
 
 # XLIFF Simple Merge
 
-This program automates the merging of XLIFF 2.0 files. 
+This program automates the merging of XLIFF files (version 1.2 and 2.0). 
 New translations from the input file (e.g. "messages.xlf") are merged into the destination file (e.g "messages.fr-FR.xlf"), while keeping exising translations intact. 
 Removed translations will be removed in the input file.
 

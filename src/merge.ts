@@ -6,13 +6,15 @@ const FUZZY_THRESHOLD = 0.2;
 
 function getDestUnit(originUnit: XmlElement, destUnitsParent: XmlElement, removedNodes: XmlNode[]): XmlElement | undefined {
     const destUnit = destUnitsParent.childWithAttribute('id', originUnit.attr.id);
-    if (!destUnit) {
-        const originText = toString(originUnit.childNamed('segment')?.childNamed('source')!);
+    if (destUnit) {
+        return destUnit;
+    } else {
+        const originText = toString(getSourceElement(originUnit)!);
         const closestUnit = removedNodes
             .filter(n => n.type === 'element')
             .map(n => ({
                 node: n,
-                dist: levenshtein(originText, toString((n as XmlElement).childNamed('segment')?.childNamed('source')!))
+                dist: levenshtein(originText, toString(getSourceElement(n as XmlElement)!))
             }))
             .reduce((previousValue, currentValue) => (previousValue?.dist ?? Number.MAX_VALUE) > currentValue.dist ? currentValue : previousValue, undefined as { node: XmlNode, dist: number } | undefined);
         if (closestUnit && closestUnit.dist / originText.length < FUZZY_THRESHOLD) {
@@ -20,8 +22,6 @@ function getDestUnit(originUnit: XmlElement, destUnitsParent: XmlElement, remove
         } else {
             return undefined;
         }
-    } else {
-        return destUnit;
     }
 }
 
@@ -33,49 +33,70 @@ function collapseWhitespace(destSourceText: string) {
     return destSourceText.trim().replace(/\s+/, ' ');
 }
 
+function getUnits(doc: XmlDocument, xliffVersion: '1.2' | '2.0') {
+    return xliffVersion === '2.0' ? doc.childNamed('file')?.childrenNamed('unit') : doc.childNamed('file')?.childNamed('body')?.childrenNamed('trans-unit');
+}
+
+function getSourceElement(unit: XmlElement): XmlElement | undefined {
+    // xliff 2.0: ./segment/source; xliff 1.2: ./source
+    return unit.childNamed('segment')?.childNamed('source') ?? unit.childNamed('source');
+}
+
 export function merge(inFileContent: string, destFileContent: string, options?: { fuzzyMatch?: boolean, collapseWhitespace?: boolean }) {
     const inDoc = new XmlDocument(inFileContent);
     const destDoc = new XmlDocument(destFileContent);
-    const inFileElement = inDoc.childNamed('file')!;
-    const destFileElement = destDoc.childNamed('file')!;
+
+    const xliffVersion = inDoc.attr.version as '1.2' | '2.0' ?? '1.2';
+
+    const destUnitsParent = xliffVersion === '2.0' ? destDoc.childNamed('file')! : destDoc.childNamed('file')?.childNamed('body')!;
+    const inUnits = getUnits(inDoc, xliffVersion) ?? [];
 
     // collect (potentially) obsolete units (defer actual removal to allow for fuzzy matching..):
-    const originIds = new Set(inFileElement.childrenNamed('unit').map(u => u.attr.id));
-    let removeNodes = destFileElement.childrenNamed('unit').filter(destUnit => !originIds.has(destUnit.attr.id));
+    const originIds = new Set(inUnits.map(u => u.attr.id));
+    let removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !originIds.has(destUnit.attr.id));
 
     // add missing units:
-    for (const unit of inFileElement.childrenNamed('unit') ?? []) {
-        const destUnit = getDestUnit(unit, destFileElement, options?.fuzzyMatch ?? true ? removeNodes : []);
-        const segmentSource = unit.childNamed('segment')!;
-        const unitSource = segmentSource.childNamed('source')!;
+    for (const unit of inUnits) {
+        const destUnit = getDestUnit(unit, destUnitsParent, options?.fuzzyMatch ?? true ? removeNodes : []);
+        const unitSource = getSourceElement(unit)!;
         const unitSourceText = toString(...unitSource.children);
         if (destUnit) {
-            const destSource = destUnit.childNamed('segment')!.childNamed('source')!;
+            const destSource = getSourceElement(destUnit)!;
             const destSourceText = toString(...destSource.children);
             if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
                 destSource.firstChild = destSource.children[0];
                 destSource.lastChild = destSource.children[destSource.children.length - 1];
-                destUnit.childNamed('segment')!.attr.state = 'initial'; // reset translation state, as source changed // TODO configurable?
+                if (xliffVersion === '2.0') {
+                    destUnit.childNamed('segment')!.attr.state = 'initial'; // reset translation state, as source changed // TODO configurable?
+                }
                 console.debug(`update element with id "${unit.attr.id}" with new source: ${toString(...destSource.children)} (was: ${destSourceText})`);
             }
             if (destUnit.attr.id !== unit.attr.id) {
                 console.debug(`matched unit with previous id "${destUnit.attr.id}" to new id: "${unit.attr.id}"`);
                 removeNodes = removeNodes.filter(n => n !== destUnit);
                 destUnit.attr.id = unit.attr.id;
-                destUnit.childNamed('segment')!.attr.state = 'initial'; // reset translation state, as source changed // TODO configurable?
+                if (xliffVersion === '2.0') {
+                    destUnit.childNamed('segment')!.attr.state = 'initial'; // reset translation state, as source changed // TODO configurable?
+                }
             }
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
-            segmentSource.attr.state = 'initial';
-            segmentSource.children.push(new XmlDocument(`<target>${unitSourceText}</target>`))
-            destFileElement.children.push(unit);
-            destFileElement.lastChild = destFileElement.children[destFileElement.children.length - 1];
+            if (xliffVersion === '2.0') {
+                const segmentSource = unit.childNamed('segment')!;
+                segmentSource.attr.state = 'initial';
+                segmentSource.children.push(new XmlDocument(`<target>${unitSourceText}</target>`));
+            } else {
+                const sourceIndex = unit.children.indexOf(unitSource);
+                unit.children.splice(sourceIndex + 1, 0, new XmlDocument(`<target>${unitSourceText}</target>`))
+            }
+            destUnitsParent.children.push(unit);
+            destUnitsParent.lastChild = destUnitsParent.children[destUnitsParent.children.length - 1];
         }
     }
 
     console.debug(`removing ${removeNodes.length} ids: ${removeNodes.map(n => n.attr.id).join(', ')}`);
-    removeChildren(destFileElement, ...removeNodes);
+    removeChildren(destUnitsParent, ...removeNodes);
 
     // retain xml declaration:
     const xmlDecMatch = destFileContent.match(/^<\?xml .*[^>]\s*/i);
