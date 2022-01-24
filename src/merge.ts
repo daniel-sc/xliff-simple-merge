@@ -1,6 +1,7 @@
 import {XmlDocument, XmlElement, XmlNode} from 'xmldoc';
 import levenshtein from 'js-levenshtein';
 
+type MergeOptions = { fuzzyMatch?: boolean, collapseWhitespace?: boolean, resetTranslationState?: boolean };
 
 const FUZZY_THRESHOLD = 0.2;
 
@@ -42,7 +43,17 @@ function getSourceElement(unit: XmlElement): XmlElement | undefined {
     return unit.childNamed('segment')?.childNamed('source') ?? unit.childNamed('source');
 }
 
-export function merge(inFileContent: string, destFileContent: string, options?: { fuzzyMatch?: boolean, collapseWhitespace?: boolean }) {
+function resetTranslationState(destUnit: XmlElement, xliffVersion: '1.2' | '2.0', options?: MergeOptions) {
+    if (options?.resetTranslationState ?? true) {
+        if (xliffVersion === '2.0') {
+            destUnit.childNamed('segment')!.attr.state = 'initial';
+        } else {
+            destUnit.childNamed('target')!.attr.state = 'new';
+        }
+    }
+}
+
+export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions) {
     const inDoc = new XmlDocument(inFileContent);
     const destDoc = new XmlDocument(destFileContent);
 
@@ -67,29 +78,25 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
                 destSource.children = unitSource.children;
                 destSource.firstChild = destSource.children[0];
                 destSource.lastChild = destSource.children[destSource.children.length - 1];
-                if (xliffVersion === '2.0') {
-                    destUnit.childNamed('segment')!.attr.state = 'initial'; // reset translation state, as source changed // TODO configurable?
-                }
+                resetTranslationState(destUnit, xliffVersion, options);
                 console.debug(`update element with id "${unit.attr.id}" with new source: ${toString(...destSource.children)} (was: ${destSourceText})`);
             }
             if (destUnit.attr.id !== unit.attr.id) {
                 console.debug(`matched unit with previous id "${destUnit.attr.id}" to new id: "${unit.attr.id}"`);
                 removeNodes = removeNodes.filter(n => n !== destUnit);
                 destUnit.attr.id = unit.attr.id;
-                if (xliffVersion === '2.0') {
-                    destUnit.childNamed('segment')!.attr.state = 'initial'; // reset translation state, as source changed // TODO configurable?
-                }
+                resetTranslationState(destUnit, xliffVersion, options);
             }
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
             if (xliffVersion === '2.0') {
                 const segmentSource = unit.childNamed('segment')!;
-                segmentSource.attr.state = 'initial';
                 segmentSource.children.push(new XmlDocument(`<target>${unitSourceText}</target>`));
             } else {
                 const sourceIndex = unit.children.indexOf(unitSource);
                 unit.children.splice(sourceIndex + 1, 0, new XmlDocument(`<target>${unitSourceText}</target>`));
             }
+            resetTranslationState(unit, xliffVersion, options);
             destUnitsParent.children.push(unit);
             destUnitsParent.lastChild = destUnitsParent.children[destUnitsParent.children.length - 1];
         }

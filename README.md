@@ -21,6 +21,7 @@ Options:
   -o, --output-file <outputFile>            output file, if not provided "merge destination" is overwritten
   --no-match-fuzzy                          prevent fuzzy matching of similar units with changed id
   --no-collapse-whitespace                  prevent collapsing of multiple whitespaces and trimming when comparing translations sources
+  --no-reset-translation-state              prevent (re-)setting the translation state to new/initial for new/changed units
   --debug                                   enable debug output
   -h, --help                                display help for command
 ```
