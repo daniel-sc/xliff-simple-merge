@@ -558,6 +558,46 @@ describe('merge', () => {
                 '  </file>\n' +
                 '</xliff>'));
         });
+        test('should replace apostrophe if configured', () => {
+            const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment>\n' +
+                '        <source>source\'val</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent, {replaceApostrophe: true});
+
+            expect(result).toContain('&apos;');
+            expect(result).not.toContain('\'');
+        });
+        test('should not replace apostrophe if configured', () => {
+            const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment>\n' +
+                '        <source>source\'val</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent, {replaceApostrophe: false});
+
+            expect(result).not.toContain('&apos;');
+            expect(result).toContain('\'');
+        });
         test('should retain notes', () => {
             const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
                 '  <file original="ng.template" id="ngi18n">\n' +

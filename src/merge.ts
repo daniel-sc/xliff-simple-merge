@@ -1,7 +1,7 @@
 import {XmlDocument, XmlElement, XmlNode} from 'xmldoc';
 import levenshtein from 'js-levenshtein';
 
-type MergeOptions = { fuzzyMatch?: boolean, collapseWhitespace?: boolean, resetTranslationState?: boolean };
+type MergeOptions = { fuzzyMatch?: boolean, collapseWhitespace?: boolean, resetTranslationState?: boolean, replaceApostrophe?: boolean };
 
 const FUZZY_THRESHOLD = 0.2;
 
@@ -51,6 +51,10 @@ function resetTranslationState(destUnit: XmlElement, xliffVersion: '1.2' | '2.0'
             destUnit.childNamed('target')!.attr.state = 'new';
         }
     }
+}
+
+function revertApostrophes(s: string, revertApos: boolean): string {
+    return revertApos ? s.replace(/&apos;/g, '\'') : s;
 }
 
 export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions) {
@@ -109,7 +113,10 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
     const xmlDecMatch = destFileContent.match(/^<\?xml .*[^>]\s*/i);
     const xmlDeclaration = xmlDecMatch ? xmlDecMatch[0] : '';
 
-    return xmlDeclaration + destDoc.toString({preserveWhitespace: true, compressed: true});
+    return xmlDeclaration + revertApostrophes(destDoc.toString({
+        preserveWhitespace: true,
+        compressed: true
+    }), !options?.replaceApostrophe);
 }
 
 /**

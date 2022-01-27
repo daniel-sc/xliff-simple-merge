@@ -11,6 +11,7 @@ const options = new Command()
     .option('--no-match-fuzzy', 'prevent fuzzy matching of similar units with changed id')
     .option('--no-collapse-whitespace', 'prevent collapsing of multiple whitespaces and trimming when comparing translations sources')
     .option('--no-reset-translation-state', 'prevent (re-)setting the translation state to new/initial for new/changed units')
+    .option('--no-replace-apostrophe', 'prevent replacing of apostrophes (\') with "&apos;"')
     .option('--debug', 'enable debug output')
     .parse()
     .opts();
@@ -25,7 +26,8 @@ const destFileContent = fs.readFileSync(options.destinationFile, {encoding: 'utf
 const outString = merge(inFileContent, destFileContent, {
     fuzzyMatch: options.matchFuzzy,
     collapseWhitespace: options.collapseWhitespace,
-    resetTranslationState: options.resetTranslationState
+    resetTranslationState: options.resetTranslationState,
+    replaceApostrophe: options.replaceApostrophe,
 });
 
 fs.writeFileSync(options.outputFile ?? options.destinationFile, outString, {encoding: 'utf8'});
