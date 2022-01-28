@@ -70,7 +70,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
     const originIds = new Set(inUnits.map(u => u.attr.id));
     let removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !originIds.has(destUnit.attr.id));
 
-    // add missing units:
+    // add missing units and update existing ones:
     for (const unit of inUnits) {
         const destUnit = getDestUnit(unit, destUnitsParent, options?.fuzzyMatch ?? true ? removeNodes : []);
         const unitSource = getSourceElement(unit)!;
@@ -90,6 +90,16 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
                 removeNodes = removeNodes.filter(n => n !== destUnit);
                 destUnit.attr.id = unit.attr.id;
                 resetTranslationState(destUnit, xliffVersion, options);
+            }
+            // update notes:
+            const nodeName = xliffVersion === '2.0' ? 'notes' : 'context-group';
+            const noteIndex = destUnit.children.findIndex(n => n.type === 'element' && n.name === nodeName); // ?? destUnit.children.findIndex(n => n.type === 'element')
+            if (noteIndex >= 0) {
+                destUnit.children.splice(noteIndex, 1);
+            }
+            const originNote = unit.childNamed(nodeName);
+            if (originNote) {
+                destUnit.children.splice(noteIndex >= 0 ? noteIndex : destUnit.children.findIndex(n => n.type === 'element'), 0, originNote);
             }
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);

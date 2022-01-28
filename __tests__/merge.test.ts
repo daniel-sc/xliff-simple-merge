@@ -295,6 +295,52 @@ describe('merge', () => {
                 '  </file>\n' +
                 '</xliff>'));
         });
+        test('should update location', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">SOME NEW VALUE</context>\n' +
+                '          <context context-type="linenumber">1</context>\n' +
+                '        </context-group>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <target state="new">source val</target>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">some old value</context>\n' +
+                '          <context context-type="linenumber">1</context>\n' +
+                '        </context-group>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent);
+
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <target state="new">source val</target>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">SOME NEW VALUE</context>\n' +
+                '          <context context-type="linenumber">1</context>\n' +
+                '        </context-group>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
     });
 
     describe('xliff 2.0', () => {
@@ -623,6 +669,49 @@ describe('merge', () => {
                 '    <unit id="ID1">\n' +
                 '      <notes>\n' +
                 '        <note category="location">D:/Localization/Angular/Bugs/Icu/src/app/app.component.ts:2</note>\n' +
+                '      </notes>\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source text</source>\n' +
+                '        <target>source text</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
+        test('should update notes', () => {
+            const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <notes>\n' +
+                '        <note category="location">A NEW LOCATION</note>\n' +
+                '      </notes>' +
+                '      <segment>\n' +
+                '        <source>source text</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <notes>\n' +
+                '        <note category="location">some old location</note>\n' +
+                '      </notes>\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source text</source>\n' +
+                '        <target>source text</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent);
+
+            expect(norm(result)).toEqual(norm('<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <notes>\n' +
+                '        <note category="location">A NEW LOCATION</note>\n' +
                 '      </notes>\n' +
                 '      <segment state="initial">\n' +
                 '        <source>source text</source>\n' +
