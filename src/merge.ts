@@ -57,6 +57,11 @@ function revertApostrophes(s: string, revertApos: boolean): string {
     return revertApos ? s.replace(/&apos;/g, '\'') : s;
 }
 
+function updateFirstAndLastChild(destUnit: XmlElement) {
+    destUnit.firstChild = destUnit.children[0];
+    destUnit.lastChild = destUnit.children[destUnit.children.length - 1];
+}
+
 export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions) {
     const inDoc = new XmlDocument(inFileContent);
     const destDoc = new XmlDocument(destFileContent);
@@ -80,8 +85,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             const destSourceText = toString(...destSource.children);
             if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
-                destSource.firstChild = destSource.children[0];
-                destSource.lastChild = destSource.children[destSource.children.length - 1];
+                updateFirstAndLastChild(destSource);
                 resetTranslationState(destUnit, xliffVersion, options);
                 console.debug(`update element with id "${unit.attr.id}" with new source: ${toString(...destSource.children)} (was: ${destSourceText})`);
             }
@@ -101,6 +105,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             if (originNote) {
                 destUnit.children.splice(noteIndex >= 0 ? noteIndex : destUnit.children.findIndex(n => n.type === 'element'), 0, originNote);
             }
+            updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
             if (xliffVersion === '2.0') {
@@ -112,7 +117,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             }
             resetTranslationState(unit, xliffVersion, options);
             destUnitsParent.children.push(unit);
-            destUnitsParent.lastChild = destUnitsParent.children[destUnitsParent.children.length - 1];
+            updateFirstAndLastChild(destUnitsParent);
         }
     }
 
@@ -138,8 +143,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
 function removeChildren(node: XmlElement, ...children: XmlNode[]): void {
     const removeIndexes = new Set<number>(node.children.map((c, i) => children.indexOf(c) >= 0 ? i : null).filter(x => x !== null) as number[]);
     node.children = node.children.filter((c, i) => !removeIndexes.has(i) && (!removeIndexes.has(i + 1) || !isWhiteSpace(c)));
-    node.firstChild = node.children[0];
-    node.lastChild = node.children[node.children.length - 1];
+    updateFirstAndLastChild(node);
 }
 
 function isWhiteSpace(node: XmlNode): boolean {
