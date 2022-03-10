@@ -125,7 +125,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
     removeChildren(destUnitsParent, ...removeNodes);
 
     // retain xml declaration:
-    const xmlDecMatch = destFileContent.match(/^<\?xml .*[^>]\s*/i);
+    const xmlDecMatch = destFileContent.match(/^<\?xml [^>]*>\s*/i);
     const xmlDeclaration = xmlDecMatch ? xmlDecMatch[0] : '';
 
     return xmlDeclaration + revertApostrophes(destDoc.toString({
