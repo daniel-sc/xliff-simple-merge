@@ -9,7 +9,8 @@
   "scripts": {
     "test": "jest",
     "test-coverage": "jest --coverage",
-    "build": "tsc"
+    "build": "tsc",
+    "prepack": "tsc"
   },
   "keywords": [
     "xliff",
