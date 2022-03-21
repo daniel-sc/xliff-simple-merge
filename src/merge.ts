@@ -5,6 +5,7 @@ type MergeOptions = {
     fuzzyMatch?: boolean,
     collapseWhitespace?: boolean,
     resetTranslationState?: boolean,
+    sourceLanguage?: boolean,
     replaceApostrophe?: boolean,
     newTranslationTargetsBlank?: boolean
 };
@@ -52,9 +53,9 @@ function getSourceElement(unit: XmlElement): XmlElement | undefined {
 function resetTranslationState(destUnit: XmlElement, xliffVersion: '1.2' | '2.0', options?: MergeOptions) {
     if (options?.resetTranslationState ?? true) {
         if (xliffVersion === '2.0') {
-            destUnit.childNamed('segment')!.attr.state = 'initial';
+            destUnit.childNamed('segment')!.attr.state = options?.sourceLanguage ? 'final' : 'initial';
         } else {
-            destUnit.childNamed('target')!.attr.state = 'new';
+            destUnit.childNamed('target')!.attr.state = options?.sourceLanguage ? 'final' : 'new';
         }
     }
 }
