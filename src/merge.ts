@@ -50,6 +50,11 @@ function getSourceElement(unit: XmlElement): XmlElement | undefined {
     return unit.childNamed('segment')?.childNamed('source') ?? unit.childNamed('source');
 }
 
+function getTargetElement(unit: XmlElement): XmlElement | undefined {
+    // xliff 2.0: ./segment/target; xliff 1.2: ./target
+    return unit.childNamed('segment')?.childNamed('target') ?? unit.childNamed('target');
+}
+
 function resetTranslationState(destUnit: XmlElement, xliffVersion: '1.2' | '2.0', options?: MergeOptions) {
     if (options?.resetTranslationState ?? true) {
         if (xliffVersion === '2.0') {
@@ -92,6 +97,9 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             const destSourceText = toString(...destSource.children);
             if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
+                if (options?.sourceLanguage) {
+                    getTargetElement(destUnit)!.children = unitSource.children;
+                }
                 updateFirstAndLastChild(destSource);
                 resetTranslationState(destUnit, xliffVersion, options);
                 console.debug(`update element with id "${unit.attr.id}" with new source: ${toString(...destSource.children)} (was: ${destSourceText})`);

@@ -383,6 +383,48 @@ describe('merge', () => {
                 '  </file>\n' +
                 '</xliff>'));
         })
+
+        test('should update node with state=final given sourceLanguage=true', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val changed</source>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID2" datatype="html">\n' +
+                '        <source>source val2</source>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <target>target val</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent, {sourceLanguage: true});
+
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val changed</source>\n' +
+                '        <target state="final">source val changed</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID2" datatype="html">\n' +
+                '        <source>source val2</source>\n' +
+                '        <target state="final">source val2</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        })
     });
 
     describe('xliff 2.0', () => {
