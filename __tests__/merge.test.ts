@@ -295,6 +295,60 @@ describe('merge', () => {
                 '  </file>\n' +
                 '</xliff>'));
         });
+        test('should add location', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">src/app/app.component.html</context>\n' +
+                '          <context context-type="linenumber">1</context>\n' +
+                '        </context-group>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">src/app/app.component2.html</context>\n' +
+                '          <context context-type="linenumber">2</context>\n' +
+                '        </context-group>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <target state="new">source val</target>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">src/app/app.component.html</context>\n' +
+                '          <context context-type="linenumber">1</context>\n' +
+                '        </context-group>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent);
+
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <target state="new">source val</target>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">src/app/app.component.html</context>\n' +
+                '          <context context-type="linenumber">1</context>\n' +
+                '        </context-group>\n' +
+                '        <context-group purpose="location">\n' +
+                '          <context context-type="sourcefile">src/app/app.component2.html</context>\n' +
+                '          <context context-type="linenumber">2</context>\n' +
+                '        </context-group>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
         test('should update location', () => {
             const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
                 '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +

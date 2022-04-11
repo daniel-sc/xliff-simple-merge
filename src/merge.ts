@@ -110,16 +110,12 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
                 destUnit.attr.id = unit.attr.id;
                 resetTranslationState(destUnit, xliffVersion, options);
             }
-            // update notes:
+            // update notes (remark: there can be multiple context-groups!):
             const nodeName = xliffVersion === '2.0' ? 'notes' : 'context-group';
-            const noteIndex = destUnit.children.findIndex(n => n.type === 'element' && n.name === nodeName); // ?? destUnit.children.findIndex(n => n.type === 'element')
-            if (noteIndex >= 0) {
-                destUnit.children.splice(noteIndex, 1);
-            }
-            const originNote = unit.childNamed(nodeName);
-            if (originNote) {
-                destUnit.children.splice(noteIndex >= 0 ? noteIndex : destUnit.children.findIndex(n => n.type === 'element'), 0, originNote);
-            }
+            const noteIndex = destUnit.children.findIndex(n => n.type === 'element' && n.name === nodeName);
+            removeChildren(destUnit, ...destUnit.children.filter(n => n.type === 'element' && n.name === nodeName));
+            const originNotes = unit.childrenNamed(nodeName) ?? [];
+            destUnit.children.splice(noteIndex >= 0 ? noteIndex : destUnit.children.length - 1, 0, ...originNotes);
             updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
