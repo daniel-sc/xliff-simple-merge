@@ -7,7 +7,7 @@ type MergeOptions = {
     resetTranslationState?: boolean,
     sourceLanguage?: boolean,
     replaceApostrophe?: boolean,
-    newTranslationTargetsBlank?: boolean
+    newTranslationTargetsBlank?: boolean | 'omit'
 };
 
 const FUZZY_THRESHOLD = 0.2;
@@ -119,13 +119,15 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
-            const targetNode = new XmlDocument(`<target>${options?.newTranslationTargetsBlank ?? false ? '' : unitSourceText}</target>`);
-            if (xliffVersion === '2.0') {
-                const segmentSource = unit.childNamed('segment')!;
-                segmentSource.children.push(targetNode);
-            } else {
-                const sourceIndex = unit.children.indexOf(unitSource);
-                unit.children.splice(sourceIndex + 1, 0, targetNode);
+            if (options?.newTranslationTargetsBlank !== 'omit') {
+                const targetNode = new XmlDocument(`<target>${options?.newTranslationTargetsBlank ?? false ? '' : unitSourceText}</target>`);
+                if (xliffVersion === '2.0') {
+                    const segmentSource = unit.childNamed('segment')!;
+                    segmentSource.children.push(targetNode);
+                } else {
+                    const sourceIndex = unit.children.indexOf(unitSource);
+                    unit.children.splice(sourceIndex + 1, 0, targetNode);
+                }
             }
             resetTranslationState(unit, xliffVersion, options);
             destUnitsParent.children.push(unit);

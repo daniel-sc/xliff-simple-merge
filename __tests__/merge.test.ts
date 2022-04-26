@@ -570,6 +570,49 @@ describe('merge', () => {
                 '    </unit></file>\n' +
                 '</xliff>'));
         });
+        test('should add missing node without target when newTranslationTargetsBlank="omit"', () => {
+            const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment>\n' +
+                '        <source>source val</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID2">\n' +
+                '      <segment>\n' +
+                '        <source>source val2</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment state="translated">\n' +
+                '        <source>source val</source>\n' +
+                '        <target>target val</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent, {newTranslationTargetsBlank: 'omit'});
+
+            expect(norm(result)).toEqual(norm('<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment state="translated">\n' +
+                '        <source>source val</source>\n' +
+                '        <target>target val</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  <unit id="ID2">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source val2</source>\n' +
+                '      </segment>\n' +
+                '    </unit></file>\n' +
+                '</xliff>'));
+        });
         test('should handle xml declaration without line break', () => {
             const sourceFileContent = '<?xml version="1.0"?><xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
                 '  <file original="ng.template" id="ngi18n">\n' +
