@@ -478,6 +478,73 @@ describe('merge', () => {
                 '    </body>\n' +
                 '  </file>\n' +
                 '</xliff>'));
+        });
+        test('should sync changed source to target when syncTargetsWithInitialState=true', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID2" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID3" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID4" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>old source text</source>\n' +
+                '        <target state="new">old source text</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID2" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '        <target state="new">translation with incorrect state</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID3" datatype="html">\n' +
+                '        <source>old source text</source>\n' +
+                '        <target state="final">translation with correct state</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID4" datatype="html">\n' +
+                '        <source>another source text after reset from resetTranslationState</source>\n' +
+                '        <target state="new">translation with reset state from resetTranslationState</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent, {syncTargetsWithInitialState: true});
+
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '        <target state="new">source text</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID2" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '        <target state="new">translation with incorrect state</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID3" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '        <target state="new">translation with correct state</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID4" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '        <target state="new">translation with reset state from resetTranslationState</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
         })
     });
 
@@ -985,6 +1052,96 @@ describe('merge', () => {
                 '      <segment state="initial">\n' +
                 '        <source>source text</source>\n' +
                 '        <target>source text</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
+        test('should sync changed source to target when syncTargetsWithInitialState=true', () => {
+            const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment>\n' +
+                '        <source>source text</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID2">\n' +
+                '      <segment>\n' +
+                '        <source>source text</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID3">\n' +
+                '      <segment>\n' +
+                '        <source>source text</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID3">\n' +
+                '      <segment>\n' +
+                '        <source>source text</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID4">\n' +
+                '      <segment>\n' +
+                '        <source>source text</source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>old source text</source>\n' +
+                '        <target>old source text</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID2">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source text</source>\n' +
+                '        <target>translation with incorrect state</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID3">\n' +
+                '      <segment state="translated">\n' +
+                '        <source>old source text</source>\n' +
+                '        <target>translation with correct state</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID4">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>another source text after reset from resetTranslationState</source>\n' +
+                '        <target>translation with reset state from resetTranslationState</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent, {syncTargetsWithInitialState: true});
+
+            expect(norm(result)).toEqual(norm('<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source text</source>\n' +
+                '        <target>source text</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID2">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source text</source>\n' +
+                '        <target>translation with incorrect state</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID3">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source text</source>\n' +
+                '        <target>translation with correct state</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '    <unit id="ID4">\n' +
+                '      <segment state="initial">\n' +
+                '        <source>source text</source>\n' +
+                '        <target>translation with reset state from resetTranslationState</target>\n' +
                 '      </segment>\n' +
                 '    </unit>\n' +
                 '  </file>\n' +

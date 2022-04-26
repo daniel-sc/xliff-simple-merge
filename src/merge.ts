@@ -7,10 +7,15 @@ type MergeOptions = {
     resetTranslationState?: boolean,
     sourceLanguage?: boolean,
     replaceApostrophe?: boolean,
-    newTranslationTargetsBlank?: boolean | 'omit'
+    newTranslationTargetsBlank?: boolean | 'omit',
+    /** For untranslated units with initial state (state="initial" / state="new"), a updated source will be copied into the target */
+    syncTargetsWithInitialState?: boolean,
 };
 
 const FUZZY_THRESHOLD = 0.2;
+
+const STATE_INITIAL_XLF_2_0 = 'initial';
+const STATE_INITIAL_XLF_1_2 = 'new';
 
 function getDestUnit(originUnit: XmlElement, destUnitsParent: XmlElement, removedNodes: XmlNode[]): XmlElement | undefined {
     const destUnit = destUnitsParent.childWithAttribute('id', originUnit.attr.id);
@@ -58,10 +63,18 @@ function getTargetElement(unit: XmlElement): XmlElement | undefined {
 function resetTranslationState(destUnit: XmlElement, xliffVersion: '1.2' | '2.0', options?: MergeOptions) {
     if (options?.resetTranslationState ?? true) {
         if (xliffVersion === '2.0') {
-            destUnit.childNamed('segment')!.attr.state = options?.sourceLanguage ? 'final' : 'initial';
+            destUnit.childNamed('segment')!.attr.state = options?.sourceLanguage ? 'final' : STATE_INITIAL_XLF_2_0;
         } else {
-            destUnit.childNamed('target')!.attr.state = options?.sourceLanguage ? 'final' : 'new';
+            destUnit.childNamed('target')!.attr.state = options?.sourceLanguage ? 'final' : STATE_INITIAL_XLF_1_2;
         }
+    }
+}
+
+function isInitialState(destUnit: XmlElement, xliffVersion: '1.2' | '2.0'): boolean {
+    if (xliffVersion === '2.0') {
+        return destUnit.childNamed('segment')?.attr.state === STATE_INITIAL_XLF_2_0;
+    } else {
+        return destUnit.childNamed('target')?.attr.state === STATE_INITIAL_XLF_1_2;
     }
 }
 
@@ -72,6 +85,11 @@ function revertApostrophes(s: string, revertApos: boolean): string {
 function updateFirstAndLastChild(destUnit: XmlElement) {
     destUnit.firstChild = destUnit.children[0];
     destUnit.lastChild = destUnit.children[destUnit.children.length - 1];
+}
+
+function isUntranslated(destUnit: XmlElement, xliffVersion: '1.2' | '2.0', destSourceText: string): boolean {
+    const destTargetText = toString(...getTargetElement(destUnit)?.children ?? []);
+    return isInitialState(destUnit, xliffVersion) && destSourceText === destTargetText;
 }
 
 export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions) {
@@ -97,7 +115,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             const destSourceText = toString(...destSource.children);
             if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
-                if (options?.sourceLanguage) {
+                if (options?.sourceLanguage || (options?.syncTargetsWithInitialState === true && isUntranslated(destUnit, xliffVersion, destSourceText))) {
                     getTargetElement(destUnit)!.children = unitSource.children;
                 }
                 updateFirstAndLastChild(destSource);
