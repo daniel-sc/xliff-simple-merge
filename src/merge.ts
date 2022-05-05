@@ -17,24 +17,19 @@ const FUZZY_THRESHOLD = 0.2;
 const STATE_INITIAL_XLF_2_0 = 'initial';
 const STATE_INITIAL_XLF_1_2 = 'new';
 
-function getDestUnit(originUnit: XmlElement, destUnitsParent: XmlElement, removedNodes: XmlNode[]): XmlElement | undefined {
-    const destUnit = destUnitsParent.childWithAttribute('id', originUnit.attr.id);
-    if (destUnit) {
-        return destUnit;
+function findClosestMatch(originUnit: XmlElement, destUnits: XmlNode[]): [targetUnit: XmlElement | undefined, score: number] {
+    const originText = toString(getSourceElement(originUnit)!);
+    const closestUnit = destUnits
+        .filter(n => n.type === 'element')
+        .map(n => ({
+            node: n,
+            dist: levenshtein(originText, toString(getSourceElement(n as XmlElement)!))
+        }))
+        .reduce((previousValue, currentValue) => (previousValue?.dist ?? Number.MAX_VALUE) > currentValue.dist ? currentValue : previousValue, undefined as { node: XmlNode, dist: number } | undefined);
+    if (closestUnit && closestUnit.dist / originText.length < FUZZY_THRESHOLD) {
+        return [closestUnit.node as XmlElement, closestUnit.dist / originText.length];
     } else {
-        const originText = toString(getSourceElement(originUnit)!);
-        const closestUnit = removedNodes
-            .filter(n => n.type === 'element')
-            .map(n => ({
-                node: n,
-                dist: levenshtein(originText, toString(getSourceElement(n as XmlElement)!))
-            }))
-            .reduce((previousValue, currentValue) => (previousValue?.dist ?? Number.MAX_VALUE) > currentValue.dist ? currentValue : previousValue, undefined as { node: XmlNode, dist: number } | undefined);
-        if (closestUnit && closestUnit.dist / originText.length < FUZZY_THRESHOLD) {
-            return closestUnit.node as XmlElement;
-        } else {
-            return undefined;
-        }
+        return [undefined, 0];
     }
 }
 
@@ -92,6 +87,26 @@ function isUntranslated(destUnit: XmlElement, xliffVersion: '1.2' | '2.0', destS
     return isInitialState(destUnit, xliffVersion) && destSourceText === destTargetText;
 }
 
+function getUnitAndDestUnit(inUnits: XmlElement[], removeNodes: XmlElement[], destUnitsParent: XmlElement, xliffVersion: '1.2' | '2.0', fuzzyMatch: boolean): [unit: XmlElement | undefined, destUnit: XmlElement | undefined] {
+    const unit = inUnits?.[0];
+    if (!unit) {
+        return [undefined, undefined];
+    }
+    const destUnit = destUnitsParent.childWithAttribute('id', unit.attr.id);
+    if (destUnit) {
+        return [unit, destUnit];
+    } else if (fuzzyMatch) {
+        // find best match first to make sure we don't steal a better match just because the other unit was first:
+        const allInUnitsWithoutDestinationUnit = inUnits.filter(u => !destUnitsParent.childWithAttribute('id', u.attr.id)); // non-empty as it contains at least `unit`!
+        const bestMatch = allInUnitsWithoutDestinationUnit
+            .map((inUnit: XmlElement): [XmlElement, [XmlElement | undefined, number]] => [inUnit, findClosestMatch(inUnit, removeNodes)])
+            .reduce((previousValue, currentValue) => (previousValue[1][1] ?? Number.MAX_VALUE) > currentValue[1][1] ? currentValue : previousValue, [undefined, [undefined, Number.MAX_VALUE]] as [XmlElement | undefined, [XmlElement | undefined, number]]);
+        return [bestMatch[0], bestMatch[1][0]];
+    } else {
+        return [unit, undefined];
+    }
+}
+
 export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions) {
     const inDoc = new XmlDocument(inFileContent);
     const destDoc = new XmlDocument(destFileContent);
@@ -103,11 +118,13 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
 
     // collect (potentially) obsolete units (defer actual removal to allow for fuzzy matching..):
     const originIds = new Set(inUnits.map(u => u.attr.id));
-    let removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !originIds.has(destUnit.attr.id));
+    const removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !originIds.has(destUnit.attr.id));
 
     // add missing units and update existing ones:
-    for (const unit of inUnits) {
-        const destUnit = getDestUnit(unit, destUnitsParent, options?.fuzzyMatch ?? true ? removeNodes : []);
+    for (let [unit, destUnit] = getUnitAndDestUnit(inUnits, removeNodes, destUnitsParent, xliffVersion, options?.fuzzyMatch ?? true);
+         unit !== undefined;
+         [unit, destUnit] = getUnitAndDestUnit(inUnits, removeNodes, destUnitsParent, xliffVersion, options?.fuzzyMatch ?? true)) {
+        inUnits.splice(inUnits.indexOf(unit), 1);
         const unitSource = getSourceElement(unit)!;
         const unitSourceText = toString(...unitSource.children);
         if (destUnit) {
@@ -124,7 +141,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             }
             if (destUnit.attr.id !== unit.attr.id) {
                 console.debug(`matched unit with previous id "${destUnit.attr.id}" to new id: "${unit.attr.id}"`);
-                removeNodes = removeNodes.filter(n => n !== destUnit);
+                removeNodes.splice(removeNodes.indexOf(destUnit), 1);
                 destUnit.attr.id = unit.attr.id;
                 resetTranslationState(destUnit, xliffVersion, options);
             }
