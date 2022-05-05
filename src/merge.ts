@@ -107,7 +107,12 @@ function getUnitAndDestUnit(inUnits: XmlElement[], removeNodes: XmlElement[], de
     }
 }
 
-export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions) {
+export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions): string {
+    const [mergedDestFileContent] = mergeWithMapping(inFileContent, destFileContent, options);
+    return mergedDestFileContent;
+}
+
+export function mergeWithMapping(inFileContent: string, destFileContent: string, options?: MergeOptions): [mergedDestFileContent: string, idMappging: { [oldId: string]: string }] {
     const inDoc = new XmlDocument(inFileContent);
     const destDoc = new XmlDocument(destFileContent);
 
@@ -119,6 +124,8 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
     // collect (potentially) obsolete units (defer actual removal to allow for fuzzy matching..):
     const originIds = new Set(inUnits.map(u => u.attr.id));
     const removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !originIds.has(destUnit.attr.id));
+
+    const idMapping: { [id: string]: string } = {};
 
     // add missing units and update existing ones:
     for (let [unit, destUnit] = getUnitAndDestUnit(inUnits, removeNodes, destUnitsParent, xliffVersion, options?.fuzzyMatch ?? true);
@@ -141,6 +148,7 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
             }
             if (destUnit.attr.id !== unit.attr.id) {
                 console.debug(`matched unit with previous id "${destUnit.attr.id}" to new id: "${unit.attr.id}"`);
+                idMapping[destUnit.attr.id] = unit.attr.id;
                 removeNodes.splice(removeNodes.indexOf(destUnit), 1);
                 destUnit.attr.id = unit.attr.id;
                 resetTranslationState(destUnit, xliffVersion, options);
@@ -177,10 +185,11 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
     const xmlDecMatch = destFileContent.match(/^<\?xml [^>]*>\s*/i);
     const xmlDeclaration = xmlDecMatch ? xmlDecMatch[0] : '';
 
-    return xmlDeclaration + revertApostrophes(destDoc.toString({
+    const mergedContent = xmlDeclaration + revertApostrophes(destDoc.toString({
         preserveWhitespace: true,
         compressed: true
     }), !options?.replaceApostrophe);
+    return [mergedContent, idMapping];
 }
 
 /**
