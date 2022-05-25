@@ -38,7 +38,7 @@ function toString(...nodes: XmlNode[]): string {
 }
 
 function collapseWhitespace(destSourceText: string) {
-    return destSourceText.trim().replace(/\s+/, ' ');
+    return destSourceText.replace(/\s+/, ' ');
 }
 
 function getUnits(doc: XmlDocument, xliffVersion: '1.2' | '2.0') {

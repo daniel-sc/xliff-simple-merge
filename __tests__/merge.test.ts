@@ -444,6 +444,42 @@ describe('merge', () => {
                 '  </file>\n' +
                 '</xliff>'));
         });
+
+        test('should add leading whitespace option collapseWhitespace=true', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source> source val</source>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val</source>\n' +
+                '        <target>target val</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent, {collapseWhitespace: true});
+
+            console.log('result', result);
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source> source val</source>\n' +
+                '        <target state="new">target val</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
         test('should retain location', () => {
             const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
                 '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
