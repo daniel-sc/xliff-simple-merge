@@ -768,7 +768,39 @@ describe('merge', () => {
                 '    </body>\n' +
                 '  </file>\n' +
                 '</xliff>'));
-        })
+        });
+        it('should handle empty target file gracefully', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID2" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '';
+
+            const result = merge(sourceFileContent, destFileContent, undefined, 'messages.fr.xlf');
+
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '        <target state="new">source text</target>\n' +
+                '      </trans-unit>\n' +
+                '      <trans-unit id="ID2" datatype="html">\n' +
+                '        <source>source text</source>\n' +
+                '        <target state="new">source text</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
     });
 
     describe('xliff 2.0', () => {
@@ -1372,6 +1404,42 @@ describe('merge', () => {
         });
     });
 
+    it('should handle empty target file gracefully', () => {
+        const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
+            '  <file original="ng.template" id="ngi18n">\n' +
+            '    <unit id="ID1">\n' +
+            '      <segment>\n' +
+            '        <source>source text</source>\n' +
+            '      </segment>\n' +
+            '    </unit>\n' +
+            '    <unit id="ID2">\n' +
+            '      <segment>\n' +
+            '        <source>source text</source>\n' +
+            '      </segment>\n' +
+            '    </unit>\n' +
+            '  </file>\n' +
+            '</xliff>';
+        const destFileContent = '';
+
+        const result = merge(sourceFileContent, destFileContent, undefined, 'messages.fr.xlf');
+
+        expect(norm(result)).toEqual(norm('<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr">\n' +
+            '  <file original="ng.template" id="ngi18n">\n' +
+            '    <unit id="ID1">\n' +
+            '      <segment state="initial">\n' +
+            '        <source>source text</source>\n' +
+            '        <target>source text</target>\n' +
+            '      </segment>\n' +
+            '    </unit>\n' +
+            '    <unit id="ID2">\n' +
+            '      <segment state="initial">\n' +
+            '        <source>source text</source>\n' +
+            '        <target>source text</target>\n' +
+            '      </segment>\n' +
+            '    </unit>\n' +
+            '  </file>\n' +
+            '</xliff>'));
+    });
 });
 
 function norm(xml: string): string {

@@ -107,16 +107,42 @@ function getUnitAndDestUnit(inUnits: XmlElement[], removeNodes: XmlElement[], de
     }
 }
 
-export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions): string {
-    const [mergedDestFileContent] = mergeWithMapping(inFileContent, destFileContent, options);
+function createEmptyTarget(isXliffV2: boolean, srcLang: string, targetLang: string): string {
+    if (isXliffV2) {
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="${srcLang}" trgLang="${targetLang}">
+  <file original="ng.template" id="ngi18n">
+  </file>
+</xliff>`;
+    } else {
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="${srcLang}" target-language="${targetLang}" datatype="plaintext" original="ng2.template">
+    <body>
+    </body>
+  </file>
+</xliff>`;
+    }
+}
+
+function extractSourceLocale(translationSourceFile: XmlDocument, isXliffV2: boolean): string {
+    return (isXliffV2 ? translationSourceFile?.attr['srcLang'] : translationSourceFile?.childNamed('file')?.attr['source-language']) ?? 'en'
+}
+
+function extractTargetLocale(targetPath: string | undefined): string {
+    return targetPath?.match(/\.([a-zA-Z-]+)\.xlf$/)?.[1] ?? 'en';
+}
+
+export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions, destFilePath?: string): string {
+    const [mergedDestFileContent] = mergeWithMapping(inFileContent, destFileContent, options, destFilePath);
     return mergedDestFileContent;
 }
 
-export function mergeWithMapping(inFileContent: string, destFileContent: string, options?: MergeOptions): [mergedDestFileContent: string, idMappging: { [oldId: string]: string }] {
+export function mergeWithMapping(inFileContent: string, destFileContent: string, options?: MergeOptions, destFilePath?: string): [mergedDestFileContent: string, idMappging: { [oldId: string]: string }] {
     const inDoc = new XmlDocument(inFileContent);
-    const destDoc = new XmlDocument(destFileContent);
-
     const xliffVersion = inDoc.attr.version as '1.2' | '2.0' ?? '1.2';
+
+    const destDoc = new XmlDocument(destFileContent.match(/^[\n\r\s]*$/) ? createEmptyTarget(xliffVersion === '2.0', extractSourceLocale(inDoc, xliffVersion === '2.0'), extractTargetLocale(destFilePath)) : destFileContent);
 
     const destUnitsParent = xliffVersion === '2.0' ? destDoc.childNamed('file')! : destDoc.childNamed('file')?.childNamed('body')!;
     const inUnits = getUnits(inDoc, xliffVersion) ?? [];

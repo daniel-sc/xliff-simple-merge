@@ -21,13 +21,13 @@ if (!options.debug) {
 }
 
 const inFileContent = fs.readFileSync(options.inputFile, {encoding: 'utf8'});
-const destFileContent = fs.readFileSync(options.destinationFile, {encoding: 'utf8'});
+const destFileContent = fs.existsSync(options.destinationFile) ?  fs.readFileSync(options.destinationFile, {encoding: 'utf8'}) : '';
 
 const outString = merge(inFileContent, destFileContent, {
     fuzzyMatch: options.matchFuzzy,
     collapseWhitespace: options.collapseWhitespace,
     resetTranslationState: options.resetTranslationState,
     replaceApostrophe: options.replaceApostrophe,
-});
+}, options.destinationFile);
 
 fs.writeFileSync(options.outputFile ?? options.destinationFile, outString, {encoding: 'utf8'});
