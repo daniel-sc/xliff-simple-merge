@@ -1172,6 +1172,41 @@ describe('merge', () => {
                 '</xliff>'));
         });
 
+        test('should not update node with only collapsible whitespace change', () => {
+            const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment>\n' +
+                '        <source>    source val    </source>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment state="translated">\n' +
+                '        <source> source val </source>\n' +
+                '        <target>target val</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent);
+
+            expect(norm(result)).toEqual(norm('<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de" trgLang="fr-CH">\n' +
+                '  <file original="ng.template" id="ngi18n">\n' +
+                '    <unit id="ID1">\n' +
+                '      <segment state="translated">\n' +
+                '        <source> source val </source>\n' +
+                '        <target>target val</target>\n' +
+                '      </segment>\n' +
+                '    </unit>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
+
         test('should update changed node without updating translation state if disabled', () => {
             const sourceFileContent = '<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="de">\n' +
                 '  <file original="ng.template" id="ngi18n">\n' +
