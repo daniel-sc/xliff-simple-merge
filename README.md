@@ -10,6 +10,8 @@ Removed translations will be removed in the input file.
 
 This can be used as post-processing to angular i18n extraction, to update translations files.
 
+**Angular users**: It is recommended to _not_ use this program directly but the custom angular tooling: [ng-extract-i18n-merge](https://github.com/daniel-sc/ng-extract-i18n-merge)
+
 ## Usage
 
 Either install via `npm i -g xliff-simple-merge` or run directly with `npx xliff-simple-merge`.
