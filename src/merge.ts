@@ -153,6 +153,49 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
     return mergedDestFileContent;
 }
 
+/**
+ * syncs all elements from `source` to `dest` that are not in `ignoreElementNames`.
+ * @param source
+ * @param target
+ * @param ignoreElementNames
+ */
+function syncOtherNodes(source: XmlElement, target: XmlElement, ...ignoreElementNames: string[]): void {
+    const targetNodesByName = new Map<string, XmlElement[]>();
+    target.children.filter((n): n is XmlElement => n.type == 'element')
+        .forEach(node => targetNodesByName.set(node.name, [...(targetNodesByName.get(node.name) ?? []), node]));
+    const sourceNodesByName = new Map<string, XmlElement[]>();
+    source.children.filter((n): n is XmlElement => n.type == 'element')
+        .forEach(node => sourceNodesByName.set(node.name, [...(sourceNodesByName.get(node.name) ?? []), node]));
+
+    // remove all nodes that are not in source:
+    const removeSuperfluousTargetNodes = [...targetNodesByName.entries()].filter(([name]) => !ignoreElementNames.includes(name))
+        .map(([name, nodes]) => nodes.slice(0, nodes.length - (sourceNodesByName.get(name)?.length ?? 0)))
+        .flat();
+    removeChildren(target, ...removeSuperfluousTargetNodes);
+
+    let i = 0;
+    let sourceOffset = 0;
+    let targetOffset = 0;
+    while (i + sourceOffset < source.children.length) {
+        const targetElement = target.children?.[i + targetOffset];
+        const sourceElement = source.children[i + sourceOffset];
+        if (!(sourceElement.type == 'element') || ignoreElementNames.includes(sourceElement.name)) {
+            sourceOffset++;
+        } else if (i + targetOffset < target.children.length && (!(targetElement?.type == 'element') || ignoreElementNames.includes(targetElement.name))) {
+            targetOffset++;
+        } else if (targetElement?.type == 'element' && targetElement.name === sourceElement.name) {
+            targetElement.children = sourceElement.children;
+            targetElement.attr = sourceElement.attr;
+            updateFirstAndLastChild(targetElement);
+            i++;
+        } else {
+            target.children.splice(i + targetOffset, 0, sourceElement);
+            i++;
+        }
+        updateFirstAndLastChild(target);
+    }
+}
+
 export function mergeWithMapping(inFileContent: string, destFileContent: string, options?: MergeOptions, destFilePath?: string): [mergedDestFileContent: string, idMappging: { [oldId: string]: string }] {
     const inDoc = new XmlDocument(inFileContent);
     const xliffVersion = inDoc.attr.version as '1.2' | '2.0' ?? '1.2';
@@ -195,12 +238,8 @@ export function mergeWithMapping(inFileContent: string, destFileContent: string,
                 destUnit.attr.id = unit.attr.id;
                 resetTranslationState(destUnit, xliffVersion, options);
             }
-            // update notes (remark: there can be multiple context-groups!):
-            const nodeName = xliffVersion === '2.0' ? 'notes' : 'context-group';
-            const noteIndex = destUnit.children.findIndex(n => n.type === 'element' && n.name === nodeName);
-            removeChildren(destUnit, ...destUnit.children.filter(n => n.type === 'element' && n.name === nodeName));
-            const originNotes = unit.childrenNamed(nodeName) ?? [];
-            destUnit.children.splice(noteIndex >= 0 ? noteIndex : destUnit.children.length - 1, 0, ...originNotes);
+
+            syncOtherNodes(unit, destUnit, 'source', 'target', 'segment')
             updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
