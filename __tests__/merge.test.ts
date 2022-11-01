@@ -3,6 +3,33 @@ import {XmlDocument} from 'xmldoc';
 
 describe('merge', () => {
     describe('xliff 1.2', () => {
+        test('should handle many units with fuzzy match performantly', () => {
+            const count = 1000;
+            function generateSourceUnit(n: number): string {
+                return `<trans-unit id="source-ID${n}" datatype="html"><source>source val ${n}</source></trans-unit>`;
+            }
+            function generateTargetUnit(n: number): string {
+                return `<trans-unit id="target-ID${n}" datatype="html"><source>target source val ${n}</source><target>target val</target></trans-unit>`;
+
+            }
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                Array.from({length: count}, (_, i) => generateSourceUnit(i)).join('\n') +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                Array.from({length: count}, (_, i) => generateTargetUnit(i)).join('\n') +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent);
+            expect(result).toBeTruthy();
+        });
         test('should add missing node', () => {
             const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
                 '  <file source-language="de" datatype="plaintext" original="ng2.template">\n' +
@@ -1510,11 +1537,6 @@ describe('merge', () => {
                 '      </segment>\n' +
                 '    </unit>\n' +
                 '    <unit id="ID2">\n' +
-                '      <segment>\n' +
-                '        <source>source text</source>\n' +
-                '      </segment>\n' +
-                '    </unit>\n' +
-                '    <unit id="ID3">\n' +
                 '      <segment>\n' +
                 '        <source>source text</source>\n' +
                 '      </segment>\n' +

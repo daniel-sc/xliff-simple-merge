@@ -17,20 +17,17 @@ const FUZZY_THRESHOLD = 0.2;
 const STATE_INITIAL_XLF_2_0 = 'initial';
 const STATE_INITIAL_XLF_1_2 = 'new';
 
-function findClosestMatch(originUnit: XmlElement, destUnits: XmlNode[]): [targetUnit: XmlElement | undefined, score: number] {
+
+function findCloseMatches(originUnit: XmlElement, destUnits: XmlElement[]): { elem: XmlElement, score: number }[] {
     const originText = toString(getSourceElement(originUnit)!);
-    const closestUnit = destUnits
+    return destUnits
         .filter(n => n.type === 'element')
         .map(n => ({
-            node: n,
-            dist: levenshtein(originText, toString(getSourceElement(n as XmlElement)!))
+            elem: n,
+            score: levenshtein(originText, toString(getSourceElement(n as XmlElement)!)) / originText.length
         }))
-        .reduce((previousValue, currentValue) => (previousValue?.dist ?? Number.MAX_VALUE) > currentValue.dist ? currentValue : previousValue, undefined as { node: XmlNode, dist: number } | undefined);
-    if (closestUnit && closestUnit.dist / originText.length < FUZZY_THRESHOLD) {
-        return [closestUnit.node as XmlElement, closestUnit.dist / originText.length];
-    } else {
-        return [undefined, 0];
-    }
+        .filter(x => x.score < FUZZY_THRESHOLD)
+        .sort((a, b) => a.score - b.score); // TODO test
 }
 
 function toString(...nodes: XmlNode[]): string {
@@ -100,26 +97,6 @@ function isUntranslated(destUnit: XmlElement, xliffVersion: '1.2' | '2.0', destS
     const targetElement = getTargetElement(destUnit);
     const destTargetText = toString(...targetElement?.children ?? []);
     return isInitialState(destUnit, xliffVersion) && (!targetElement || destSourceText === destTargetText);
-}
-
-function getUnitAndDestUnit(inUnits: XmlElement[], removeNodes: XmlElement[], destUnitsParent: XmlElement, xliffVersion: '1.2' | '2.0', fuzzyMatch: boolean): [unit: XmlElement | undefined, destUnit: XmlElement | undefined] {
-    const unit = inUnits?.[0];
-    if (!unit) {
-        return [undefined, undefined];
-    }
-    const destUnit = destUnitsParent.childWithAttribute('id', unit.attr.id);
-    if (destUnit) {
-        return [unit, destUnit];
-    } else if (fuzzyMatch) {
-        // find best match first to make sure we don't steal a better match just because the other unit was first:
-        const allInUnitsWithoutDestinationUnit = inUnits.filter(u => !destUnitsParent.childWithAttribute('id', u.attr.id)); // non-empty as it contains at least `unit`!
-        const bestMatch = allInUnitsWithoutDestinationUnit
-            .map((inUnit: XmlElement): [XmlElement, [XmlElement | undefined, number]] => [inUnit, findClosestMatch(inUnit, removeNodes)])
-            .reduce((previousValue, currentValue) => (previousValue[1][1] ?? Number.MAX_VALUE) > currentValue[1][1] ? currentValue : previousValue, [undefined, [undefined, Number.MAX_VALUE]] as [XmlElement | undefined, [XmlElement | undefined, number]]);
-        return [bestMatch[0], bestMatch[1][0]];
-    } else {
-        return [unit, undefined];
-    }
 }
 
 function createEmptyTarget(isXliffV2: boolean, srcLang: string, targetLang: string): string {
@@ -196,6 +173,21 @@ function syncOtherNodes(source: XmlElement, target: XmlElement, ...ignoreElement
     }
 }
 
+function getMinScoreId(bestMatchesIdToUnits: Map<string, { elem: XmlElement; score: number }[]>): string | undefined {
+    let minScoreId: string | undefined;
+    let minScore = Number.MAX_VALUE;
+    bestMatchesIdToUnits.forEach((x, id) => {
+        if (x.length) {
+            const score = x[0].score;
+            if (score < minScore) {
+                minScore = score;
+                minScoreId = id;
+            }
+        }
+    });
+    return minScoreId;
+}
+
 export function mergeWithMapping(inFileContent: string, destFileContent: string, options?: MergeOptions, destFilePath?: string): [mergedDestFileContent: string, idMappging: { [oldId: string]: string }] {
     const inDoc = new XmlDocument(inFileContent);
     const xliffVersion = inDoc.attr.version as '1.2' | '2.0' ?? '1.2';
@@ -204,18 +196,18 @@ export function mergeWithMapping(inFileContent: string, destFileContent: string,
 
     const destUnitsParent = xliffVersion === '2.0' ? destDoc.childNamed('file')! : destDoc.childNamed('file')?.childNamed('body')!;
     const inUnits = getUnits(inDoc, xliffVersion) ?? [];
+    const inUnitsById = new Map<string, XmlElement>(inUnits.map(unit => [unit.attr.id!, unit]));
+    const destUnitsById = new Map<string, XmlElement>((getUnits(destDoc, xliffVersion) ?? []).map(unit => [unit.attr.id!, unit]));
+    const allInUnitsWithoutDestinationUnit = inUnits.filter(u => !destUnitsById.has(u.attr.id));
+    const allInUnitsWithDestinationUnit = inUnits.filter(u => destUnitsById.has(u.attr.id));
 
     // collect (potentially) obsolete units (defer actual removal to allow for fuzzy matching..):
-    const originIds = new Set(inUnits.map(u => u.attr.id));
-    const removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !originIds.has(destUnit.attr.id));
+    const removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !inUnitsById.has(destUnit.attr.id));
 
     const idMapping: { [id: string]: string } = {};
 
-    // add missing units and update existing ones:
-    for (let [unit, destUnit] = getUnitAndDestUnit(inUnits, removeNodes, destUnitsParent, xliffVersion, options?.fuzzyMatch ?? true);
-         unit !== undefined;
-         [unit, destUnit] = getUnitAndDestUnit(inUnits, removeNodes, destUnitsParent, xliffVersion, options?.fuzzyMatch ?? true)) {
-        inUnits.splice(inUnits.indexOf(unit), 1);
+    /** Syncs `unit` to `destUnit` or adds `unit` as new, if `destUnit` is not given. */
+    function handle(unit: XmlElement, destUnit: XmlElement | undefined) {
         const unitSource = getSourceElement(unit)!;
         const unitSourceText = toString(...unitSource.children);
         if (destUnit) {
@@ -256,6 +248,33 @@ export function mergeWithMapping(inFileContent: string, destFileContent: string,
             resetTranslationState(unit, xliffVersion, options);
             destUnitsParent.children.push(unit);
             updateFirstAndLastChild(destUnitsParent);
+        }
+    }
+
+    for (const unit of allInUnitsWithDestinationUnit) {
+        handle(unit, destUnitsById.get(unit.attr.id));
+    }
+
+    if (options?.fuzzyMatch ?? true) {
+        const bestMatchesIdToUnits = new Map<string, { elem: XmlElement, score: number }[]>(allInUnitsWithoutDestinationUnit.map((inUnit: XmlElement) => [inUnit.attr.id!, findCloseMatches(inUnit, removeNodes)]));
+        while (bestMatchesIdToUnits.size) {
+            const inUnitId: string = getMinScoreId(bestMatchesIdToUnits) ?? [...bestMatchesIdToUnits.keys()][0];
+            const bestMatch: XmlElement | undefined = bestMatchesIdToUnits.get(inUnitId)![0]?.elem;
+            handle(inUnitsById.get(inUnitId)!, bestMatch);
+            bestMatchesIdToUnits.delete(inUnitId);
+            if (bestMatch) {
+                bestMatchesIdToUnits.forEach(x => {
+                    const i = x.findIndex(y => y.elem === bestMatch);
+                    if (i >= 0) {
+                        x.splice(i, 1);
+                    }
+                });
+            }
+
+        }
+    } else {
+        for (const unit of allInUnitsWithoutDestinationUnit) {
+            handle(unit, undefined);
         }
     }
 
