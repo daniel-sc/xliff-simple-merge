@@ -231,7 +231,7 @@ export function mergeWithMapping(inFileContent: string, destFileContent: string,
                 resetTranslationState(destUnit, xliffVersion, options);
             }
 
-            syncOtherNodes(unit, destUnit, 'source', 'target', 'segment')
+            syncOtherNodes(unit, destUnit, 'source', 'target', 'segment');
             updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
