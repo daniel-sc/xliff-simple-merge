@@ -236,7 +236,8 @@ export function mergeWithMapping(inFileContent: string, destFileContent: string,
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
             if (options?.newTranslationTargetsBlank !== 'omit') {
-                const targetNode = new XmlDocument(`<target>${options?.newTranslationTargetsBlank ?? false ? '' : unitSourceText}</target>`);
+                const shouldBeBlank = (options?.newTranslationTargetsBlank ?? false) && !(options?.sourceLanguage ?? false);
+                const targetNode = new XmlDocument(`<target>${shouldBeBlank ? '' : unitSourceText}</target>`);
                 if (xliffVersion === '2.0') {
                     const segmentSource = unit.childNamed('segment')!;
                     segmentSource.children.push(targetNode);
