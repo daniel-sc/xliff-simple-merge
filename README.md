@@ -18,9 +18,10 @@ Either install via `npm i -g xliff-simple-merge` or run directly with `npx xliff
 
 ```text
 Options:
-  -i, --input-file <inputFile>              input file/merge origin
+  -i, --input-file <inputFiles...>          input file(s)/merge origin(s)
   -d, --destination-file <destinationFile>  merge destination
   -o, --output-file <outputFile>            output file, if not provided "merge destination" is overwritten
+  -e, -exclude-file <excludeFiles...>       exclude all unit IDs of the provided file(s) 
   --no-match-fuzzy                          prevent fuzzy matching of similar units with changed id
   --no-collapse-whitespace                  prevent collapsing of multiple whitespaces when comparing translations sources
   --no-reset-translation-state              prevent (re-)setting the translation state to new/initial for new/changed units
@@ -28,3 +29,7 @@ Options:
   --debug                                   enable debug output
   -h, --help                                display help for command
 ```
+
+### Notes
+* If different input files contains the same unit IDs, only the latter ones will be used.
+* The input file can have entry units and if it is the case they will have priority.
