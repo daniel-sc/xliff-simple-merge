@@ -32,4 +32,4 @@ Options:
 
 ### Notes
 * If different input files contains the same unit IDs, only the latter ones will be used.
-* The input file can have entry units and if it is the case they will have priority.
+* The input file can have target defined in the units and if it is the case they will have priority.

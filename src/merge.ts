@@ -198,16 +198,16 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
     const excludeDocs = (options?.excludeFiles ?? []).map(excludeFile => new XmlDocument(excludeFile));
 
     const destUnitsParent = xliffVersion === '2.0' ? destDoc.childNamed('file')! : destDoc.childNamed('file')?.childNamed('body')!;
-    const inUnits = inDocs.map(inDoc => getUnits(inDoc, xliffVersion) ?? []).flat(1);
-    const inUnitsById = new Map<string, XmlElement>(inUnits.map(unit => [unit.attr.id!, unit]));
-    const destUnitsById = new Map<string, XmlElement>((getUnits(destDoc, xliffVersion) ?? []).map(unit => [unit.attr.id!, unit]));
     const excludeUnits = excludeDocs.map(excludeDoc => getUnits(excludeDoc, xliffVersion) ?? []).flat(1);
     const excludeUnitsById = new Map<string, XmlElement>(excludeUnits.map(unit => [unit.attr.id!, unit]));
+    const inUnits = inDocs.map(inDoc => getUnits(inDoc, xliffVersion) ?? []).flat(1).filter(inUnit => !excludeUnitsById.has(inUnit.attr.id));
+    const inUnitsById = new Map<string, XmlElement>(inUnits.map(unit => [unit.attr.id!, unit]));
+    const destUnitsById = new Map<string, XmlElement>((getUnits(destDoc, xliffVersion) ?? []).map(unit => [unit.attr.id!, unit]));
     const allInUnitsWithoutDestinationUnit = inUnits.filter(u => !destUnitsById.has(u.attr.id));
     const allInUnitsWithDestinationUnit = inUnits.filter(u => destUnitsById.has(u.attr.id));
 
     // collect (potentially) obsolete units (defer actual removal to allow for fuzzy matching..):
-    const removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !inUnitsById.has(destUnit.attr.id) || excludeUnitsById.has(destUnit.attr.id));
+    const removeNodes = getUnits(destDoc, xliffVersion)!.filter(destUnit => !inUnitsById.has(destUnit.attr.id));
 
     const idMapping: { [id: string]: string } = {};
 
