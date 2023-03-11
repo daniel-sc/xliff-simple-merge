@@ -358,24 +358,13 @@ describe('merge', () => {
                 '</xliff>'));
         });
 
-        test('should take only one target', () => {
+        test('should take origin target if destination does not have one', () => {
             const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
                 '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
                 '    <body>\n' +
                 '      <trans-unit id="ID1" datatype="html">\n' +
                 '        <source>source val1</source>\n' +
                 '        <target state="translated">target val1</target>\n' +
-                '      </trans-unit>\n' +
-                '      <trans-unit id="ID2" datatype="html">\n' +
-                '        <source>source val2</source>\n' +
-                '        <target state="translated">target val2_input</target>\n' +
-                '      </trans-unit>\n' +
-                '      <trans-unit id="ID3" datatype="html">\n' +
-                '        <source>source val3</source>\n' +
-                '      </trans-unit>\n' +
-                '      <trans-unit id="ID4" datatype="html">\n' +
-                '        <source>source val4</source>\n' +
-                '        <target state="translated">target val4</target>\n' +
                 '      </trans-unit>\n' +
                 '    </body>\n' +
                 '  </file>\n' +
@@ -385,14 +374,6 @@ describe('merge', () => {
                 '    <body>\n' +
                 '      <trans-unit id="ID1" datatype="html">\n' +
                 '        <source>source val1</source>\n' +
-                '      </trans-unit>\n' +
-                '      <trans-unit id="ID2" datatype="html">\n' +
-                '        <source>source val2</source>\n' +
-                '        <target state="new">target val2_output</target>\n' +
-                '      </trans-unit>\n' +
-                '      <trans-unit id="ID3" datatype="html">\n' +
-                '        <source>source val3</source>\n' +
-                '        <target state="translated">target val3</target>\n' +
                 '      </trans-unit>\n' +
                 '    </body>\n' +
                 '  </file>\n' +
@@ -405,17 +386,73 @@ describe('merge', () => {
                 '    <body>\n' +
                 '      <trans-unit id="ID1" datatype="html">\n' +
                 '        <source>source val1</source>\n' +
-                '        <target state="new">target val1</target>\n' +
+                '        <target state="translated">target val1</target>\n' +
                 '      </trans-unit>\n' +
-                '      <trans-unit id="ID2" datatype="html">\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
+
+        test('should take output target if input an output have one', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
                 '        <source>source val2</source>\n' +
-                '        <target state="new">target val2_input</target>\n' +
+                '        <target state="translated">target val2_input</target>\n' +
                 '      </trans-unit>\n' +
-                '      <trans-unit id="ID3" datatype="html">\n' +
-                '        <source>source val3</source>\n' +
-                '        <target state="translated">target val3</target>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val2</source>\n' +
+                '        <target state="new">target val2_output</target>\n' +
                 '      </trans-unit>\n' +
-                '      <trans-unit id="ID4" datatype="html">\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent);
+
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val2</source>\n' +
+                '        <target state="new">target val2_output</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>'));
+        });
+
+        test('should not add second target to input unit', () => {
+            const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
+                '        <source>source val4</source>\n' +
+                '        <target state="translated">target val4</target>\n' +
+                '      </trans-unit>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+            const destFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '    </body>\n' +
+                '  </file>\n' +
+                '</xliff>';
+
+            const result = merge(sourceFileContent, destFileContent);
+
+            expect(norm(result)).toEqual(norm('<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +
+                '  <file source-language="de" target-language="fr-ch" datatype="plaintext" original="ng2.template">\n' +
+                '    <body>\n' +
+                '      <trans-unit id="ID1" datatype="html">\n' +
                 '        <source>source val4</source>\n' +
                 '        <target state="translated">target val4</target>\n' +
                 '      </trans-unit>\n' +
@@ -423,6 +460,7 @@ describe('merge', () => {
                 '  </file>\n' +
                 '</xliff>'));
         });
+
 
         test('should exclude IDs provided in exclude file', () => {
             const sourceFileContent = '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n' +

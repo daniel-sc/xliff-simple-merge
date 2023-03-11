@@ -219,20 +219,19 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
             const destSource = getSourceElement(destUnit)!;
             const destSourceText = toString(...destSource.children);
             const originTarget = getTargetElement(unit);
-            const originTargetText = originTarget ? toString(...originTarget?.children) : '';
             const destTarget = getTargetElement(destUnit);
-            const destTargetText = destTarget ? toString(...destTarget?.children) : '';
-            if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText)
-                || (originTarget && collapseWhitespace(originTargetText) !== collapseWhitespace(destTargetText)) : destSourceText !== unitSourceText
-                || (originTarget && originTargetText !== destTargetText)) {
+            if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
-                if (originTarget || options?.sourceLanguage || (options?.syncTargetsWithInitialState === true && isUntranslated(destUnit, xliffVersion, destSourceText))) {
+                if (options?.sourceLanguage || (options?.syncTargetsWithInitialState === true && isUntranslated(destUnit, xliffVersion, destSourceText))) {
                     const targetElement = destTarget ?? createTargetElement(destUnit, xliffVersion);
-                    targetElement!.children = originTarget? originTarget.children : unitSource.children;
+                    targetElement!.children = unitSource.children;
                 }
                 updateFirstAndLastChild(destSource);
                 resetTranslationState(destUnit, xliffVersion, options);
                 console.debug(`update element with id "${unit.attr.id}" with new source: ${toString(...destSource.children)} (was: ${destSourceText})`);
+            } else if (originTarget && !destTarget) {
+                const sourceIndex = destUnit.children.indexOf(destSource);
+                destUnit.children.splice(sourceIndex + 1, 0, originTarget);
             }
             if (destUnit.attr.id !== unit.attr.id) {
                 console.debug(`matched unit with previous id "${destUnit.attr.id}" to new id: "${unit.attr.id}"`);
