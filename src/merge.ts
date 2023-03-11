@@ -199,8 +199,8 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
 
     const destUnitsParent = xliffVersion === '2.0' ? destDoc.childNamed('file')! : destDoc.childNamed('file')?.childNamed('body')!;
     const excludeUnits = excludeDocs.map(excludeDoc => getUnits(excludeDoc, xliffVersion) ?? []).flat(1);
-    const excludeUnitsById = new Map<string, XmlElement>(excludeUnits.map(unit => [unit.attr.id!, unit]));
-    const inUnits = inDocs.map(inDoc => getUnits(inDoc, xliffVersion) ?? []).flat(1).filter(inUnit => !excludeUnitsById.has(inUnit.attr.id));
+    const excludeUnitsId = new Set<string>(excludeUnits.map(unit => unit.attr.id!));
+    const inUnits = inDocs.map(inDoc => getUnits(inDoc, xliffVersion) ?? []).flat(1).filter(inUnit => !excludeUnitsId .has(inUnit.attr.id));
     const inUnitsById = new Map<string, XmlElement>(inUnits.map(unit => [unit.attr.id!, unit]));
     const destUnitsById = new Map<string, XmlElement>((getUnits(destDoc, xliffVersion) ?? []).map(unit => [unit.attr.id!, unit]));
     const allInUnitsWithoutDestinationUnit = inUnits.filter(u => !destUnitsById.has(u.attr.id));
