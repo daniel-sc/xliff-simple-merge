@@ -2,6 +2,7 @@ import {XmlDocument, XmlElement, XmlNode} from 'xmldoc';
 import levenshtein from 'js-levenshtein';
 
 type MergeOptions = {
+    excludeFiles?: string[],
     fuzzyMatch?: boolean,
     collapseWhitespace?: boolean,
     resetTranslationState?: boolean,
@@ -118,15 +119,15 @@ function createEmptyTarget(isXliffV2: boolean, srcLang: string, targetLang: stri
 }
 
 function extractSourceLocale(translationSourceFile: XmlDocument, isXliffV2: boolean): string {
-    return (isXliffV2 ? translationSourceFile?.attr['srcLang'] : translationSourceFile?.childNamed('file')?.attr['source-language']) ?? 'en'
+    return (isXliffV2 ? translationSourceFile?.attr.srcLang : translationSourceFile?.childNamed('file')?.attr['source-language']) ?? 'en'
 }
 
 function extractTargetLocale(targetPath: string | undefined): string {
     return targetPath?.match(/\.([a-zA-Z-]+)\.xlf$/)?.[1] ?? 'en';
 }
 
-export function merge(inFileContent: string, destFileContent: string, options?: MergeOptions, destFilePath?: string): string {
-    const [mergedDestFileContent] = mergeWithMapping(inFileContent, destFileContent, options, destFilePath);
+export function merge(inFilesContent: string | string[], destFileContent: string, options?: MergeOptions, destFilePath?: string): string {
+    const [mergedDestFileContent] = mergeWithMapping(inFilesContent, destFileContent, options, destFilePath);
     return mergedDestFileContent;
 }
 
@@ -138,10 +139,10 @@ export function merge(inFileContent: string, destFileContent: string, options?: 
  */
 function syncOtherNodes(source: XmlElement, target: XmlElement, ...ignoreElementNames: string[]): void {
     const targetNodesByName = new Map<string, XmlElement[]>();
-    target.children.filter((n): n is XmlElement => n.type == 'element')
+    target.children.filter((n): n is XmlElement => n.type === 'element')
         .forEach(node => targetNodesByName.set(node.name, [...(targetNodesByName.get(node.name) ?? []), node]));
     const sourceNodesByName = new Map<string, XmlElement[]>();
-    source.children.filter((n): n is XmlElement => n.type == 'element')
+    source.children.filter((n): n is XmlElement => n.type === 'element')
         .forEach(node => sourceNodesByName.set(node.name, [...(sourceNodesByName.get(node.name) ?? []), node]));
 
     // remove all nodes that are not in source:
@@ -156,11 +157,11 @@ function syncOtherNodes(source: XmlElement, target: XmlElement, ...ignoreElement
     while (i + sourceOffset < source.children.length) {
         const targetElement = target.children?.[i + targetOffset];
         const sourceElement = source.children[i + sourceOffset];
-        if (!(sourceElement.type == 'element') || ignoreElementNames.includes(sourceElement.name)) {
+        if (!(sourceElement.type === 'element') || ignoreElementNames.includes(sourceElement.name)) {
             sourceOffset++;
-        } else if (i + targetOffset < target.children.length && (!(targetElement?.type == 'element') || ignoreElementNames.includes(targetElement.name))) {
+        } else if (i + targetOffset < target.children.length && (!(targetElement?.type === 'element') || ignoreElementNames.includes(targetElement.name))) {
             targetOffset++;
-        } else if (targetElement?.type == 'element' && targetElement.name === sourceElement.name) {
+        } else if (targetElement?.type === 'element' && targetElement.name === sourceElement.name) {
             targetElement.children = sourceElement.children;
             targetElement.attr = sourceElement.attr;
             updateFirstAndLastChild(targetElement);
@@ -188,14 +189,18 @@ function getMinScoreId(bestMatchesIdToUnits: Map<string, { elem: XmlElement; sco
     return minScoreId;
 }
 
-export function mergeWithMapping(inFileContent: string, destFileContent: string, options?: MergeOptions, destFilePath?: string): [mergedDestFileContent: string, idMappging: { [oldId: string]: string }] {
-    const inDoc = new XmlDocument(inFileContent);
-    const xliffVersion = inDoc.attr.version as '1.2' | '2.0' ?? '1.2';
+export function mergeWithMapping(inFilesContent: string | string[], destFileContent: string, options?: MergeOptions, destFilePath?: string): [mergedDestFileContent: string, idMappging: { [oldId: string]: string }] {
+    inFilesContent = Array.isArray(inFilesContent) ? inFilesContent : [inFilesContent];
+    const inDocs = inFilesContent.map(inFileContent => new XmlDocument(inFileContent));
+    const xliffVersion = inDocs[0].attr.version as '1.2' | '2.0' ?? '1.2';
 
-    const destDoc = new XmlDocument(destFileContent.match(/^[\n\r\s]*$/) ? createEmptyTarget(xliffVersion === '2.0', extractSourceLocale(inDoc, xliffVersion === '2.0'), extractTargetLocale(destFilePath)) : destFileContent);
+    const destDoc = new XmlDocument(destFileContent.match(/^[\n\r\s]*$/) ? createEmptyTarget(xliffVersion === '2.0', extractSourceLocale(inDocs[0], xliffVersion === '2.0'), extractTargetLocale(destFilePath)) : destFileContent);
+    const excludeDocs = (options?.excludeFiles ?? []).map(excludeFile => new XmlDocument(excludeFile));
 
     const destUnitsParent = xliffVersion === '2.0' ? destDoc.childNamed('file')! : destDoc.childNamed('file')?.childNamed('body')!;
-    const inUnits = getUnits(inDoc, xliffVersion) ?? [];
+    const excludeUnits = excludeDocs.map(excludeDoc => getUnits(excludeDoc, xliffVersion) ?? []).flat(1);
+    const excludeUnitsId = new Set<string>(excludeUnits.map(unit => unit.attr.id!));
+    const inUnits = inDocs.map(inDoc => getUnits(inDoc, xliffVersion) ?? []).flat(1).filter(inUnit => !excludeUnitsId .has(inUnit.attr.id));
     const inUnitsById = new Map<string, XmlElement>(inUnits.map(unit => [unit.attr.id!, unit]));
     const destUnitsById = new Map<string, XmlElement>((getUnits(destDoc, xliffVersion) ?? []).map(unit => [unit.attr.id!, unit]));
     const allInUnitsWithoutDestinationUnit = inUnits.filter(u => !destUnitsById.has(u.attr.id));
@@ -213,15 +218,20 @@ export function mergeWithMapping(inFileContent: string, destFileContent: string,
         if (destUnit) {
             const destSource = getSourceElement(destUnit)!;
             const destSourceText = toString(...destSource.children);
+            const originTarget = getTargetElement(unit);
+            const destTarget = getTargetElement(destUnit);
             if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
                 if (options?.sourceLanguage || (options?.syncTargetsWithInitialState === true && isUntranslated(destUnit, xliffVersion, destSourceText))) {
-                    const targetElement = getTargetElement(destUnit) ?? createTargetElement(destUnit, xliffVersion);
+                    const targetElement = destTarget ?? createTargetElement(destUnit, xliffVersion);
                     targetElement!.children = unitSource.children;
                 }
                 updateFirstAndLastChild(destSource);
                 resetTranslationState(destUnit, xliffVersion, options);
                 console.debug(`update element with id "${unit.attr.id}" with new source: ${toString(...destSource.children)} (was: ${destSourceText})`);
+            } else if (originTarget && !destTarget) {
+                const sourceIndex = destUnit.children.indexOf(destSource);
+                destUnit.children.splice(sourceIndex + 1, 0, originTarget);
             }
             if (destUnit.attr.id !== unit.attr.id) {
                 console.debug(`matched unit with previous id "${destUnit.attr.id}" to new id: "${unit.attr.id}"`);
@@ -235,18 +245,20 @@ export function mergeWithMapping(inFileContent: string, destFileContent: string,
             updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
-            if (options?.newTranslationTargetsBlank !== 'omit') {
-                const shouldBeBlank = (options?.newTranslationTargetsBlank ?? false) && !(options?.sourceLanguage ?? false);
-                const targetNode = new XmlDocument(`<target>${shouldBeBlank ? '' : unitSourceText}</target>`);
-                if (xliffVersion === '2.0') {
-                    const segmentSource = unit.childNamed('segment')!;
-                    segmentSource.children.push(targetNode);
-                } else {
-                    const sourceIndex = unit.children.indexOf(unitSource);
-                    unit.children.splice(sourceIndex + 1, 0, targetNode);
+            if (!getTargetElement(unit)) {
+                if (options?.newTranslationTargetsBlank !== 'omit') {
+                    const shouldBeBlank = (options?.newTranslationTargetsBlank ?? false) && !(options?.sourceLanguage ?? false);
+                    const targetNode = new XmlDocument(`<target>${shouldBeBlank ? '' : unitSourceText}</target>`);
+                    if (xliffVersion === '2.0') {
+                        const segmentSource = unit.childNamed('segment')!;
+                        segmentSource.children.push(targetNode);
+                    } else {
+                        const sourceIndex = unit.children.indexOf(unitSource);
+                        unit.children.splice(sourceIndex + 1, 0, targetNode);
+                    }
                 }
+                resetTranslationState(unit, xliffVersion, options);
             }
-            resetTranslationState(unit, xliffVersion, options);
             destUnitsParent.children.push(unit);
             updateFirstAndLastChild(destUnitsParent);
         }
