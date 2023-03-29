@@ -21,11 +21,11 @@ if (!options.debug) {
     console.debug = () => null;
 }
 
-const inFilesContent = (options.inputFiles as string[]).map(inputFile => fs.readFileSync(inputFile, {encoding: 'utf8'}));
+const inFilesContent = (options.inputFile as string[]).map(inputFile => fs.readFileSync(inputFile, {encoding: 'utf8'}));
 const destFileContent = fs.existsSync(options.destinationFile) ?  fs.readFileSync(options.destinationFile, {encoding: 'utf8'}) : '';
 
 const outString = merge(inFilesContent, destFileContent, {
-    excludeFiles: options.excludeFiles,
+    excludeFiles: options.excludeFile,
     fuzzyMatch: options.matchFuzzy,
     collapseWhitespace: options.collapseWhitespace,
     resetTranslationState: options.resetTranslationState,
