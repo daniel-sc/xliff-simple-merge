@@ -9,7 +9,7 @@ type MergeOptions = {
     sourceLanguage?: boolean,
     replaceApostrophe?: boolean,
     newTranslationTargetsBlank?: boolean | 'omit',
-    /** For untranslated units with initial state (state="initial" / state="new"), a updated source will be copied into the target */
+    /** For untranslated units with initial state (state="initial" / state="new"), an updated source will be copied into the target (unless `newTranslationTargetsBlank='omit'/true`) */
     syncTargetsWithInitialState?: boolean,
 };
 
@@ -223,8 +223,10 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
             if (options?.collapseWhitespace ?? true ? collapseWhitespace(destSourceText) !== collapseWhitespace(unitSourceText) : destSourceText !== unitSourceText) {
                 destSource.children = unitSource.children;
                 if (options?.sourceLanguage || (options?.syncTargetsWithInitialState === true && isUntranslated(destUnit, xliffVersion, destSourceText))) {
-                    const targetElement = destTarget ?? createTargetElement(destUnit, xliffVersion);
-                    targetElement!.children = unitSource.children;
+                    if (destTarget || options?.newTranslationTargetsBlank !== 'omit') {
+                        const targetElement = destTarget ?? createTargetElement(destUnit, xliffVersion);
+                        targetElement!.children = unitSource.children;
+                    }
                 }
                 updateFirstAndLastChild(destSource);
                 resetTranslationState(destUnit, xliffVersion, options);
