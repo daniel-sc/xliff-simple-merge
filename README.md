@@ -1,6 +1,5 @@
 [![npm](https://img.shields.io/npm/v/xliff-simple-merge)](https://www.npmjs.com/package/xliff-simple-merge)
 [![Coverage Status](https://coveralls.io/repos/github/daniel-sc/xliff-simple-merge/badge.svg?branch=main)](https://coveralls.io/github/daniel-sc/xliff-simple-merge?branch=main)
-[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/daniel-sc/xliff-simple-merge.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/daniel-sc/xliff-simple-merge/context:javascript)
 
 # XLIFF Simple Merge
 
