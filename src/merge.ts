@@ -302,8 +302,9 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
 
     const mergedContent = xmlDeclaration + revertApostrophes(destDoc.toString({
         preserveWhitespace: true,
-        compressed: true
-    }), !options?.replaceApostrophe);
+        compressed: false
+    }), !options?.replaceApostrophe).replace(/^\s*[\r\n]/gm, '');
+
     return [mergedContent, idMapping];
 }
 
