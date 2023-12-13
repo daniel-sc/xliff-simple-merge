@@ -11,6 +11,7 @@ type MergeOptions = {
     newTranslationTargetsBlank?: boolean | 'omit',
     /** For untranslated units with initial state (state="initial" / state="new"), an updated source will be copied into the target (unless `newTranslationTargetsBlank='omit'/true`) */
     syncTargetsWithInitialState?: boolean,
+    overwriteTargetWithTranslated?: boolean,
 };
 
 const FUZZY_THRESHOLD = 0.2;
@@ -213,6 +214,7 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
 
     /** Syncs `unit` to `destUnit` or adds `unit` as new, if `destUnit` is not given. */
     function handle(unit: XmlElement, destUnit: XmlElement | undefined) {
+        let sync = true;
         const unitSource = getSourceElement(unit)!;
         const unitSourceText = toString(...unitSource.children);
         if (destUnit) {
@@ -234,6 +236,17 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
             } else if (originTarget && !destTarget) {
                 const sourceIndex = destUnit.children.indexOf(destSource);
                 destUnit.children.splice(sourceIndex + 1, 0, originTarget);
+            } else if (options?.overwriteTargetWithTranslated === true && !isUntranslated(unit, xliffVersion, unitSourceText) && isUntranslated(destUnit, xliffVersion, destSourceText)) {
+                sync = false;
+                destSource.children = unitSource.children;
+                if (destTarget || options?.newTranslationTargetsBlank !== 'omit') {
+                    const targetElement = destTarget ?? createTargetElement(destUnit, xliffVersion);
+                    targetElement!.children = unitSource.children;
+                }
+                const translatedSource = originTarget?.children ? toString(...originTarget?.children) : '';
+                updateFirstAndLastChild(destSource);
+                syncOtherNodes(unit, destUnit, 'segment');
+                console.debug(`update element with id "${unit.attr.id}" with new target: ${unitSourceText} (was: ${translatedSource})`);
             }
             if (destUnit.attr.id !== unit.attr.id) {
                 console.debug(`matched unit with previous id "${destUnit.attr.id}" to new id: "${unit.attr.id}"`);
@@ -242,8 +255,9 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
                 destUnit.attr.id = unit.attr.id;
                 resetTranslationState(destUnit, xliffVersion, options);
             }
-
-            syncOtherNodes(unit, destUnit, 'source', 'target', 'segment');
+            if (sync) {
+                syncOtherNodes(unit, destUnit, 'source', 'target', 'segment');
+            }
             updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
