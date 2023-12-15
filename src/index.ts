@@ -13,6 +13,7 @@ const options = new Command()
     .option('--no-collapse-whitespace', 'prevent collapsing of multiple whitespaces and trimming when comparing translations sources')
     .option('--no-reset-translation-state', 'prevent (re-)setting the translation state to new/initial for new/changed units')
     .option('--no-replace-apostrophe', 'prevent replacing of apostrophes (\') with "&apos;"')
+    .option('-w, --overwrite-with-translated', 'overwrite target of destination with target of source, if it\'s translated and destination target not')
     .option('--debug', 'enable debug output')
     .parse()
     .opts();
@@ -30,6 +31,7 @@ const outString = merge(inFilesContent, destFileContent, {
     collapseWhitespace: options.collapseWhitespace,
     resetTranslationState: options.resetTranslationState,
     replaceApostrophe: options.replaceApostrophe,
+    overwriteTargetWithTranslated: options.overwriteWithTranslated,
 }, options.destinationFile);
 
 fs.writeFileSync(options.outputFile ?? options.destinationFile, outString, {encoding: 'utf8'});

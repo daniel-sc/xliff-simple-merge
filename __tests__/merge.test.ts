@@ -2059,6 +2059,65 @@ describe('merge', () => {
             '  </file>\n' +
             '</xliff>'));
     });
+
+    it('should update translation', () => {
+        const sourceFileContent = `
+            <?xml version="1.0"?><xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+            <file source-language="en" target-language="de" datatype="plaintext" original="ng2.template">
+                <body>
+                <trans-unit id="appNotificationListSeeMore" datatype="html">
+                    <source>see more...</source>
+                    <target state="translated">mehr anzeigen...</target>
+                </trans-unit>
+                </body>
+            </file>
+            </xliff>`;
+
+        const destFileContent = `
+            <?xml version="1.0"?><xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+            <file source-language="en" target-language="de" datatype="plaintext" original="ng2.template">
+                <body>
+                <trans-unit id="appNotificationListSeeMore" datatype="html">
+                    <source>see more...</source>
+                    <target state="new">see more...</target>
+                </trans-unit>
+                </body>
+            </file>
+            </xliff>`;
+
+    const result = merge(sourceFileContent, destFileContent, {overwriteTargetWithTranslated: true});
+
+    expect(norm(result)).toEqual(norm(sourceFileContent));
+    });
+    
+    it('should update translation without target', () => {
+        const sourceFileContent = `
+            <?xml version="1.0"?><xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+            <file source-language="en" target-language="de" datatype="plaintext" original="ng2.template">
+                <body>
+                <trans-unit id="appNotificationListSeeMore" datatype="html">
+                    <source>see more...</source>
+                    <target state="translated">mehr anzeigen...</target>
+                </trans-unit>
+                </body>
+            </file>
+            </xliff>`;
+
+        const destFileContent = `
+            <?xml version="1.0"?><xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+            <file source-language="en" target-language="de" datatype="plaintext" original="ng2.template">
+                <body>
+                <trans-unit id="appNotificationListSeeMore" datatype="html">
+                    <source>see more...</source>
+                </trans-unit>
+                </body>
+            </file>
+            </xliff>`;
+
+    const result = merge(sourceFileContent, destFileContent, {overwriteTargetWithTranslated: true});
+
+    expect(norm(result)).toEqual(norm(sourceFileContent));
+    });
 });
 
 function norm(xml: string): string {

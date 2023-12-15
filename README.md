@@ -21,6 +21,7 @@ Options:
   -d, --destination-file <destinationFile>  merge destination
   -o, --output-file <outputFile>            output file, if not provided "merge destination" is overwritten
   -e, -exclude-file <excludeFiles...>       exclude all unit IDs of the provided file(s) 
+  -w, --overwrite-with-translated           overwrite target of destination with target of source, if it's translated and destination target not
   --no-match-fuzzy                          prevent fuzzy matching of similar units with changed id
   --no-collapse-whitespace                  prevent collapsing of multiple whitespaces when comparing translations sources
   --no-reset-translation-state              prevent (re-)setting the translation state to new/initial for new/changed units
