@@ -214,7 +214,6 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
 
     /** Syncs `unit` to `destUnit` or adds `unit` as new, if `destUnit` is not given. */
     function handle(unit: XmlElement, destUnit: XmlElement | undefined) {
-        let sync = true;
         const unitSource = getSourceElement(unit)!;
         const unitSourceText = toString(...unitSource.children);
         if (destUnit) {
@@ -237,7 +236,6 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
                 const sourceIndex = destUnit.children.indexOf(destSource);
                 destUnit.children.splice(sourceIndex + 1, 0, originTarget);
             } else if (options?.overwriteTargetWithTranslated === true && !isUntranslated(unit, xliffVersion, unitSourceText) && isUntranslated(destUnit, xliffVersion, destSourceText)) {
-                sync = false;
                 destSource.children = unitSource.children;
                 if (destTarget || options?.newTranslationTargetsBlank !== 'omit') {
                     const targetElement = destTarget ?? createTargetElement(destUnit, xliffVersion);
@@ -255,9 +253,7 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
                 destUnit.attr.id = unit.attr.id;
                 resetTranslationState(destUnit, xliffVersion, options);
             }
-            if (sync) {
-                syncOtherNodes(unit, destUnit, 'source', 'target', 'segment');
-            }
+            syncOtherNodes(unit, destUnit, 'source', 'target', 'segment');
             updateFirstAndLastChild(destUnit);
         } else {
             console.debug(`adding element with id "${unit.attr.id}"`);
