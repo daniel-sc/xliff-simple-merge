@@ -44,6 +44,7 @@
   "author": "daniel-schreiber@gmx.de",
   "license": "MIT",
   "files": [
-    "dist/src/**/*"
+    "dist/src/**/*",
+    "dist/src/*"
   ]
 }
