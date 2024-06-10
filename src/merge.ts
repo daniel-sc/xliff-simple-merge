@@ -12,6 +12,7 @@ type MergeOptions = {
     /** For untranslated units with initial state (state="initial" / state="new"), an updated source will be copied into the target (unless `newTranslationTargetsBlank='omit'/true`) */
     syncTargetsWithInitialState?: boolean,
     overwriteTargetWithTranslated?: boolean,
+    compressOutput?: boolean
 };
 
 const FUZZY_THRESHOLD = 0.2;
@@ -312,7 +313,7 @@ export function mergeWithMapping(inFilesContent: string | string[], destFileCont
 
     const mergedContent = xmlDeclaration + revertApostrophes(destDoc.toString({
         preserveWhitespace: true,
-        compressed: false
+        compressed: options?.compressOutput == true
     }), !options?.replaceApostrophe).replace(/^\s*[\r\n]/gm, '');
 
     return [mergedContent, idMapping];
